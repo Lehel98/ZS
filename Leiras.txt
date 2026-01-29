@@ -1,0 +1,242 @@
+# 3D Zombie Survival FPS – Tervezés (OpenGL + C++)
+
+## 1. Alapkoncepció
+
+**Műfaj:** túlélő / sandbox / FPS (később TPS)
+
+**Nézet:**
+
+* kezdetben **First Person View**
+* később bővíthető Third Person View-ra
+
+**Cél:**
+
+* zombik elől túlélni minél tovább
+* barikádokat építeni
+* erőforrásokat gyűjteni
+* idővel egyre nehezebb hullámokat túlélni
+
+**Technológia:**
+
+* C++20
+* OpenGL (core profile)
+* Visual Studio 2022
+* GLFW (ablak + input)
+* GLAD (OpenGL loader)
+* GLM (matematika)
+
+---
+
+## 2. Gameplay részletesen
+
+### 2.1 Játékos
+
+**Képességek:**
+
+* mozgás (WASD)
+* sprint
+* ugrás
+* kamera forgatás (egér)
+* interakció (E)
+
+**Állapotok:**
+
+* élet (Health)
+* stamina
+
+---
+
+### 2.2 Zombik
+
+**Viselkedés:**
+
+* egyszerű AI (state machine)
+
+  * Idle
+  * Wander
+  * Chase
+  * Attack
+
+**Tulajdonságok:**
+
+* sebesség
+* élet
+* sebzés
+
+**Spawn rendszer:**
+
+* idő alapú
+* hullámokban
+* játékostól bizonyos távolságra
+
+---
+
+### 2.3 Környezet
+
+**Első verzió:**
+
+* egyszerű sík terep
+* dobozok / falak (cube mesh)
+
+**Interaktív elemek:**
+
+* fal
+* deszka
+* barikád
+
+---
+
+### 2.4 Barikád építés
+
+**Alapelv:**
+
+* erőforrás kell hozzá (pl. Wood)
+* előre definiált építési pontokon
+
+**Folyamat:**
+
+1. játékos odalép
+2. E lenyomása
+3. ellenőrizzük az erőforrást
+4. barikád létrejön
+
+---
+
+## 3. Játék architektúra
+
+### 3.1 Modulok
+
+```
+Core/
+ ├── Application
+ ├── GameLoop
+ ├── Time
+ └── Input
+
+Rendering/
+ ├── Renderer
+ ├── Shader
+ ├── Mesh
+ └── Texture
+
+World/
+ ├── Entity
+ ├── Player
+ ├── Zombie
+ ├── Barricade
+ └── World
+
+AI/
+ ├── State
+ ├── StateMachine
+ └── ZombieAI
+
+Physics/
+ ├── Collider
+ └── CollisionSystem
+
+Gameplay/
+ ├── HealthComponent
+ ├── ResourceComponent
+ └── BuildSystem
+
+Tests/
+ ├── TestStateMachine
+ ├── TestCollision
+ └── TestHealth
+```
+
+---
+
+### 3.2 Entity–Component szemlélet (light ECS)
+
+**Entity:**
+
+* csak ID és transzformáció
+
+**Componentek:**
+
+* HealthComponent
+* MovementComponent
+* RenderComponent
+
+Ez biztosítja:
+
+* modularitás
+* tesztelhetőség
+
+---
+
+## 4. Kódolási szabályok alkalmazása
+
+### Readable code
+
+* minden függvény egy dolgot csinál
+* hosszú logika külön függvénybe
+* nincs 4-nél mélyebb nesting
+* beszédes nevek
+
+### Bug free code
+
+* minden modul külön tesztelhető
+* logika elválasztva a rendereléstől
+* unit test minden kritikus rendszerhez
+
+---
+
+## 5. Ütemterv (Sprint alapú)
+
+### Sprint 1 – Alap engine (1–2 hét)
+
+* OpenGL ablak
+* Game loop
+* Input rendszer
+* Kamera (FPS)
+* Egyszerű renderelés (cube)
+
+### Sprint 2 – Játékos
+
+* FPS kamera
+* mozgás
+* collision a világgal
+
+### Sprint 3 – Zombi AI
+
+* Entity rendszer
+* State machine
+* Zombie chase
+
+### Sprint 4 – Combat & Damage
+
+* ütközés
+* sebzés
+* halál
+
+### Sprint 5 – Barikád rendszer
+
+* erőforrás
+* építés
+* zombik rombolása
+
+### Sprint 6 – Tesztelés + refaktor
+
+* unit tesztek
+* teljesítmény javítás
+
+---
+
+## 6. Következő lépés
+
+**Következő konkrét implementáció:**
+
+▶️ *Sprint 1 – Projekt struktúra + OpenGL ablak + game loop*
+
+Ebben:
+
+* létrehozzuk a C++ projektet
+* inicializáljuk GLFW + GLAD
+* megírjuk az első tiszta, tesztelhető game loopot
+
+---
+
+✳️ Ha szeretnéd, a következő üzenetben **konkrét C++ kóddal** elkezdjük a Sprint 1-et, lépésről lépésre, a szabályaid szigorú betartásával.
