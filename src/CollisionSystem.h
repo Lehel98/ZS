@@ -2,14 +2,8 @@
 
 #include <vector>
 #include <glm/vec3.hpp>
-#include "Entity.h"
+#include "AABB.h"
 
-bool WouldCollide(
-    const Entity& movingEntity,
-    const glm::vec3& proposedPosition,
-    const std::vector<Entity*>& worldEntities);
+bool IntersectSphereVsAABB(const glm::vec3& sphereCenter, float sphereRadius, const AABB& box);
 
-void MoveEntityWithCollision(
-    Entity& entity,
-    const glm::vec3& movement,
-    const std::vector<Entity*>& worldEntities);
+bool IntersectCapsuleVsAABB(const glm::vec3& capsuleBase, const glm::vec3& capsuleTip, float capsuleRadius, const AABB& box);

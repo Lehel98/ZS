@@ -35,3 +35,7 @@ target_link_libraries(
         glfw
         opengl32
 )
+
+target_compile_definitions(ZombieSurvival PRIVATE
+    $<$<CONFIG:Debug>:ENGINE_DEBUG>
+)

@@ -2,9 +2,11 @@
 
 #include <vector>
 #include <glm/vec3.hpp>
-#include "Entity.h"
 
-glm::vec3 ComputeCameraPositionWithCollision(
-    const Entity& player,
+struct Entity;
+
+glm::vec3 ResolveCameraCollision(
+    const glm::vec3& playerPosition,
     const glm::vec3& desiredCameraPosition,
+    float cameraRadius,
     const std::vector<Entity*>& worldEntities);

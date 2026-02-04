@@ -12,6 +12,7 @@
 #include "AABB.h"
 #include "CollisionSystem.h"
 #include "CameraCollision.h"
+#include "PlayerCollision.h"
 
 #include "Shader.h"
 #include "Mesh.h"
@@ -65,13 +66,15 @@ namespace
 
     constexpr float ArenaSize = 40.0f;
     constexpr float WallHeight = 10.0f;
+    constexpr float WallThickness = 1.0f;
 
     constexpr glm::vec3 GroundColor = glm::vec3(0.55f, 0.27f, 0.07f); // barna
     constexpr glm::vec3 WallColor1 = glm::vec3(1.0f, 0.6f, 0.0f);  // sárga
     constexpr glm::vec3 WallColor2 = glm::vec3(0.8f, 0.1f, 0.1f);  // vörös
 
-    constexpr float CameraDistance = 6.0f;
-    constexpr float CameraHeight = 3.0f;
+    constexpr float CameraDistance = 10.0f;
+    constexpr float CameraHeight = 5.0f;
+    constexpr float CameraRadius = 0.25f;
 }
 
 static bool InitializeGlfw()
@@ -166,19 +169,114 @@ static void PlayerMovement(Entity& player, const std::vector<Entity*>& worldEnti
         movementDirection -= right;
     }
 
-    if (glm::length(movementDirection) > 0.0f)
+    if (glm::length(movementDirection) == 0.0f)
     {
-        movementDirection = glm::normalize(movementDirection);
+        return;
     }
+
+    movementDirection = glm::normalize(movementDirection);
 
     glm::vec3 movement = movementDirection * playerMovementSpeed * Time::GetDeltaTime();
 
-    MoveEntityWithCollision(player, movement, worldEntities);
+    glm::vec3 newPosition = player.transform.position;
+
+    auto ComputePlayerCapsule = [&](const glm::vec3& position, glm::vec3& outBase, glm::vec3& outTip)
+    {
+        const float radius = player.collision.capsule.radius;
+        const float height = player.collision.capsule.height;
+
+        outBase =
+            position +
+            player.collision.localOffset +
+            glm::vec3(0.0f, radius, 0.0f);
+
+        outTip =
+            outBase +
+            glm::vec3(0.0f, height - 2.0f * radius, 0.0f);
+    };
+
+    // ---- X AXIS ----
+    if (movement.x != 0.0f)
+    {
+        glm::vec3 testPosition = newPosition;
+        testPosition.x += movement.x;
+
+        glm::vec3 capsuleBase;
+        glm::vec3 capsuleTip;
+
+        ComputePlayerCapsule(testPosition, capsuleBase, capsuleTip);
+
+        bool collided = false;
+
+        for (const Entity* e : worldEntities)
+        {
+            if (e == &player)
+                continue;
+
+            if (e->collision.type != CollisionShape::Type::AABB)
+                continue;
+
+            AABB box = ComputeWorldAABB(*e);
+
+            if (IntersectCapsuleVsAABB(
+                capsuleBase,
+                capsuleTip,
+                player.collision.capsule.radius,
+                box))
+            {
+                collided = true;
+                break;
+            }
+        }
+
+        if (!collided)
+            newPosition.x = testPosition.x;
+    }
+
+    // ---- Z AXIS ----
+    if (movement.z != 0.0f)
+    {
+        glm::vec3 testPosition = newPosition;
+        testPosition.z += movement.z;
+
+        glm::vec3 capsuleBase;
+        glm::vec3 capsuleTip;
+
+        ComputePlayerCapsule(testPosition, capsuleBase, capsuleTip);
+
+        bool collided = false;
+
+        for (const Entity* e : worldEntities)
+        {
+            if (e == &player)
+                continue;
+
+            if (e->collision.type != CollisionShape::Type::AABB)
+                continue;
+
+            AABB box = ComputeWorldAABB(*e);
+
+            if (IntersectCapsuleVsAABB(
+                capsuleBase,
+                capsuleTip,
+                player.collision.capsule.radius,
+                box))
+            {
+                collided = true;
+                break;
+            }
+        }
+
+        if (!collided)
+            newPosition.z = testPosition.z;
+    }
+
+    player.transform.position = newPosition;
 }
 
 static void RunGameLoop(GLFWwindow* window)
 {
-    float playerMovementSpeed = 5.0f;
+    float playerMovementSpeed = 10.0f;
 
     Input::Initialize(window);
 
@@ -190,49 +288,85 @@ static void RunGameLoop(GLFWwindow* window)
     ground.transform.scale = glm::vec3(ArenaSize, 1.0f, ArenaSize);
     ground.color = GroundColor;
     ground.useVertexColor = false;
-    ground.hasCollision = true;
 
     Entity wallNorth;
     wallNorth.transform.position = glm::vec3(0.0f, WallHeight / 2.0f, ArenaSize / 2.0f);
     wallNorth.transform.scale = glm::vec3(ArenaSize, WallHeight, 1.0f);
     wallNorth.color = WallColor1;
     wallNorth.useVertexColor = false;
-    wallNorth.hasCollision = true;
+    wallNorth.collision.type = CollisionShape::Type::AABB;
+    wallNorth.collision.localOffset = glm::vec3(0.0f);
+    wallNorth.collision.halfExtents =
+    {
+        ArenaSize * 0.5f,
+        WallHeight * 0.5f,
+        WallThickness * 0.5f
+    };
 
     Entity wallSouth;
     wallSouth.transform.position = glm::vec3(0.0f, WallHeight / 2.0f, -ArenaSize / 2.0f);
     wallSouth.transform.scale = glm::vec3(ArenaSize, WallHeight, 1.0f);
     wallSouth.color = WallColor1;
     wallSouth.useVertexColor = false;
-    wallSouth.hasCollision = true;
+    wallSouth.collision.type = CollisionShape::Type::AABB;
+    wallSouth.collision.localOffset = glm::vec3(0.0f);
+    wallSouth.collision.halfExtents =
+    {
+        ArenaSize * 0.5f,
+        WallHeight * 0.5f,
+        WallThickness * 0.5f
+    };
 
     Entity wallEast;
     wallEast.transform.position = glm::vec3(ArenaSize / 2.0f, WallHeight / 2.0f, 0.0f);
     wallEast.transform.scale = glm::vec3(1.0f, WallHeight, ArenaSize);
     wallEast.color = WallColor2;
     wallEast.useVertexColor = false;
-    wallEast.hasCollision = true;
+    wallEast.collision.type = CollisionShape::Type::AABB;
+    wallEast.collision.localOffset = glm::vec3(0.0f);
+    wallEast.collision.halfExtents =
+    {
+        WallThickness * 0.5f, // X – vékony
+        WallHeight * 0.5f,    // Y – magas
+        ArenaSize * 0.5f     // Z – hosszú
+    };
+
 
     Entity wallWest;
     wallWest.transform.position = glm::vec3(-ArenaSize / 2.0f, WallHeight / 2.0f, 0.0f);
     wallWest.transform.scale = glm::vec3(1.0f, WallHeight, ArenaSize);
     wallWest.color = WallColor2;
     wallWest.useVertexColor = false;
-    wallWest.hasCollision = true;
+    wallWest.collision.type = CollisionShape::Type::AABB;
+    wallWest.collision.localOffset = glm::vec3(0.0f);
+    wallWest.collision.halfExtents =
+    {
+        WallThickness * 0.5f,
+        WallHeight * 0.5f,
+        ArenaSize * 0.5f
+    };
 
     Entity centerCube;
     centerCube.transform.position = glm::vec3(0.0f, 0.5f, 0.0f);
     centerCube.transform.scale = glm::vec3(1.0f);
     centerCube.color = glm::vec3(1.0f);
     centerCube.useVertexColor = true;
-    centerCube.hasCollision = true;
+    centerCube.collision.type = CollisionShape::Type::AABB;
+    centerCube.collision.localOffset = glm::vec3(0.0f);
+    centerCube.collision.halfExtents =
+    {
+        0.5f,
+        0.5f,
+        0.5f
+    };
 
     Entity player;
     player.transform.position = glm::vec3(0.0f, 0.6f, 5.0f);
     player.transform.scale = glm::vec3(1.0f);
     player.color = glm::vec3(0.9f, 0.6f, 0.3f);
     player.useVertexColor = true;
-    player.hasCollision = true;
+    player.collision.type = CollisionShape::Type::AABB;
+    player.collision.localOffset = glm::vec3(0.0f);
 
     std::vector<Entity*> worldEntities =
     {
@@ -244,6 +378,10 @@ static void RunGameLoop(GLFWwindow* window)
         &centerCube,
         &player
     };
+
+    Camera camera(window);
+    glm::vec3 initialCameraOffset = -camera.GetForwardDirection() * CameraDistance + glm::vec3(0.0f, CameraHeight, 0.0f);
+    camera.SetPosition(player.transform.position + initialCameraOffset);
 
     const float aspectRatio = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
@@ -258,15 +396,68 @@ static void RunGameLoop(GLFWwindow* window)
         cube.Draw();
     };
 
-    Camera camera(window);
-    glm::vec3 initialCameraOffset = -camera.GetForwardDirection() * CameraDistance + glm::vec3(0.0f, CameraHeight, 0.0f);
-    camera.SetPosition(player.transform.position + initialCameraOffset);
+#ifdef ENGINE_DEBUG
+
+    auto DrawCollisionAABB = [&](const Entity& entity)
+    {
+        if (entity.collision.type != CollisionShape::Type::AABB)
+            return;
+
+        Transform t;
+        t.position = entity.transform.position + entity.collision.localOffset;
+        t.scale = entity.collision.halfExtents * 2.0f;
+
+        glm::mat4 model = t.GetModelMatrix();
+
+        shader.SetMat4("model", model);
+        shader.SetVec3("objectColor", glm::vec3(0.48f, 0.99f, 0.0f));
+        shader.SetBool("useVertexColor", false);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        cube.Draw();
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    };
+
+    bool showWorld = true;
+    bool showCollision = false;
+
+    bool wasCtrlTDown = false;
+    bool wasCtrlCDown = false;
+
+#endif
 
     glEnable(GL_DEPTH_TEST);
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)
     {
         Time::Update();
+
+#ifdef ENGINE_DEBUG
+
+        bool ctrlDown = Input::IsKeyPressed(GLFW_KEY_LEFT_CONTROL) || Input::IsKeyPressed(GLFW_KEY_RIGHT_CONTROL);
+
+        bool tDown = Input::IsKeyPressed(GLFW_KEY_T);
+
+        bool ctrlTDown = ctrlDown && tDown;
+
+        if (ctrlTDown && !wasCtrlTDown)
+        {
+            showWorld = !showWorld;
+        }
+
+        wasCtrlTDown = ctrlTDown;
+
+        bool cDown = Input::IsKeyPressed(GLFW_KEY_C);
+        bool ctrlCDown = ctrlDown && cDown;
+
+        if (ctrlCDown && !wasCtrlCDown)
+        {
+            showCollision = !showCollision;
+        }
+
+        wasCtrlCDown = ctrlCDown;
+
+#endif
 
         if (Input::IsKeyPressed(GLFW_KEY_ESCAPE))
         {
@@ -281,7 +472,8 @@ static void RunGameLoop(GLFWwindow* window)
 
         glm::vec3 desiredCameraPosition = player.transform.position + cameraOffset;
 
-        glm::vec3 finalCameraPosition = ComputeCameraPositionWithCollision(player, desiredCameraPosition, worldEntities);
+        glm::vec3 finalCameraPosition = ResolveCameraCollision(player.transform.position, desiredCameraPosition, CameraRadius, worldEntities);
+
         camera.SetPosition(finalCameraPosition);
 
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
@@ -303,10 +495,37 @@ static void RunGameLoop(GLFWwindow* window)
         shader.SetMat4("projection", projection);
 
         centerCube.transform.rotationDegrees.y += 30.0f * Time::GetDeltaTime();
+
+#ifdef ENGINE_DEBUG
+
+        if (showWorld)
+        {
+            for (const Entity* entity : worldEntities)
+            {
+                DrawEntity(*entity);
+            }
+        }
+        else
+        {
+            DrawEntity(player);
+        }
+
+        if (showCollision)
+        {
+            for (const Entity* entity : worldEntities)
+            {
+                DrawCollisionAABB(*entity);
+            }
+        }
+
+#else
+
         for (const Entity* entity : worldEntities)
         {
             DrawEntity(*entity);
         }
+
+#endif
 
         glfwSwapBuffers(window);
         glfwPollEvents();

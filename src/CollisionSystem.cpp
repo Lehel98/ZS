@@ -1,62 +1,49 @@
 #include "CollisionSystem.h"
-#include "Collision.h"
+#include <glm/common.hpp>
+#include <glm/geometric.hpp>
 
-bool WouldCollide(
-    const Entity& movingEntity,
-    const glm::vec3& proposedPosition,
-    const std::vector<Entity*>& worldEntities)
+bool IntersectSphereVsAABB(const glm::vec3& sphereCenter, float sphereRadius, const AABB& box)
 {
-    Entity testEntity = movingEntity;
-    testEntity.transform.position = proposedPosition;
-
-    AABB movingBox = ComputeAABB(testEntity);
-
-    for (const Entity* other : worldEntities)
+    glm::vec3 closestPoint =
     {
-        if (!other->hasCollision)
-            continue;
+        glm::clamp(sphereCenter.x, box.min.x, box.max.x),
+        glm::clamp(sphereCenter.y, box.min.y, box.max.y),
+        glm::clamp(sphereCenter.z, box.min.z, box.max.z)
+    };
 
-        if (other == &movingEntity)
-            continue;
+    glm::vec3 delta = sphereCenter - closestPoint;
 
-        AABB otherBox = ComputeAABB(*other);
-
-        if (Intersects(movingBox, otherBox))
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return glm::dot(delta, delta) <= sphereRadius * sphereRadius;
 }
 
-void MoveEntityWithCollision(Entity& entity, const glm::vec3& movement, const std::vector<Entity*>& worldEntities)
+static float Clamp(float v, float minV, float maxV)
 {
-    glm::vec3 newPosition = entity.transform.position;
+    return std::max(minV, std::min(v, maxV));
+}
 
-    // X tengely
-    if (movement.x != 0.0f)
+static glm::vec3 ClosestPointOnSegment(const glm::vec3& a, const glm::vec3& b, const glm::vec3& p)
+{
+    glm::vec3 ab = b - a;
+    float t = glm::dot(p - a, ab) / glm::dot(ab, ab);
+    t = Clamp(t, 0.0f, 1.0f);
+    return a + ab * t;
+}
+
+bool IntersectCapsuleVsAABB(const glm::vec3& capsuleBase, const glm::vec3& capsuleTip, float capsuleRadius, const AABB& box)
+{
+    // AABB középpontjához legközelebbi pont a capsule tengelyen
+    glm::vec3 boxCenter = (box.min + box.max) * 0.5f;
+    glm::vec3 closestPoint =
+        ClosestPointOnSegment(capsuleBase, capsuleTip, boxCenter);
+
+    // AABB-hez legközelebbi pont
+    glm::vec3 clamped =
     {
-        glm::vec3 testPosition = newPosition;
-        testPosition.x += movement.x;
+        Clamp(closestPoint.x, box.min.x, box.max.x),
+        Clamp(closestPoint.y, box.min.y, box.max.y),
+        Clamp(closestPoint.z, box.min.z, box.max.z)
+    };
 
-        if (!WouldCollide(entity, testPosition, worldEntities))
-        {
-            newPosition.x = testPosition.x;
-        }
-    }
-
-    // Z tengely
-    if (movement.z != 0.0f)
-    {
-        glm::vec3 testPosition = newPosition;
-        testPosition.z += movement.z;
-
-        if (!WouldCollide(entity, testPosition, worldEntities))
-        {
-            newPosition.z = testPosition.z;
-        }
-    }
-
-    entity.transform.position = newPosition;
+    glm::vec3 delta = closestPoint - clamped;
+    return glm::dot(delta, delta) <= capsuleRadius * capsuleRadius;
 }

@@ -1,17 +1,16 @@
 #pragma once
 
 #include "Transform.h"
+#include "CollisionShape.h"
 
 struct Entity
 {
     Transform transform;
 
-    glm::vec3 color;
-    bool useVertexColor;
+    // Collision
+    CollisionShape collision;
 
-    bool hasCollision;
-
-    Entity() : color(1.0f, 1.0f, 1.0f), useVertexColor(false), hasCollision(false)
-    {
-    }
+    // Render
+    glm::vec3 color = glm::vec3(1.0f);
+    bool useVertexColor = false;
 };
