@@ -47,3 +47,19 @@ bool IntersectCapsuleVsAABB(const glm::vec3& capsuleBase, const glm::vec3& capsu
     glm::vec3 delta = closestPoint - clamped;
     return glm::dot(delta, delta) <= capsuleRadius * capsuleRadius;
 }
+
+bool IntersectSphereVsCapsule(
+    const glm::vec3& sphereCenter,
+    float sphereRadius,
+    const glm::vec3& capsuleBase,
+    const glm::vec3& capsuleTip,
+    float capsuleRadius)
+{
+    glm::vec3 closest = ClosestPointOnSegment(capsuleBase, capsuleTip, sphereCenter);
+
+    glm::vec3 delta = sphereCenter - closest;
+
+    float combinedRadius = sphereRadius + capsuleRadius;
+
+    return glm::dot(delta, delta) <= combinedRadius * combinedRadius;
+}
