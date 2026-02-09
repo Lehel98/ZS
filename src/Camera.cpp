@@ -15,20 +15,18 @@ Camera::Camera(GLFWwindow* window)
     up(0.0f, 1.0f, 0.0f),
     yaw(-90.0f),
     pitch(0.0f),
-    movementSpeed(5.0f),
     mouseSensitivity(0.1f),
     lastMouseX(0.0),
     lastMouseY(0.0),
     firstMouse(true)
 {
-    fixedHeight = position.y;
     glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    UpdateVectorsFromAngles();
 }
 
 void Camera::Update()
 {
     UpdateMouseLook();
-    //UpdateMovement();
 }
 
 void Camera::UpdateMouseLook()
@@ -56,70 +54,44 @@ void Camera::UpdateMouseLook()
     yaw += xOffset;
     pitch += yOffset;
 
-    pitch = std::clamp(pitch, -89.0f, 89.0f);
+    pitch = std::clamp(pitch, -90.0f, 90.0f);
+}
 
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+void Camera::UpdateVectorsFromAngles()
+{
+    float yawRad = glm::radians(yaw);
+    float pitchRad = glm::radians(pitch);
 
-    forward = glm::normalize(direction);
-    right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    glm::vec3 dir;
+    dir.x = cos(pitchRad) * cos(yawRad);
+    dir.y = sin(pitchRad);
+    dir.z = cos(pitchRad) * sin(yawRad);
+
+    forward = glm::normalize(dir);
+    right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
     up = glm::normalize(glm::cross(right, forward));
 }
 
-void Camera::UpdateMovement()
+void Camera::UpdateThirdPerson(
+    const glm::vec3& pivot,
+    float cameraDistance,
+    float cameraHeight,
+    float minDegree,
+    float maxDegree)
 {
-    float velocity = movementSpeed * Time::GetDeltaTime();
+    float effectiveMin = std::clamp(minDegree, -90.0f, -45.0f);
+    float effectiveMax = std::clamp(maxDegree, 45.0f, 90.0f);
 
-    glm::vec3 flatForward =
-    {
-        forward.x,
-        0.0f,
-        forward.z
-    };
+    pitch = std::clamp(pitch, effectiveMin, effectiveMax);
 
-    flatForward = glm::normalize(flatForward);
+    // Frissítjük az irányvektorokat
+    UpdateVectorsFromAngles();
 
-    glm::vec3 flatRight =
-    {
-        right.x,
-        0.0f,
-        right.z
-    };
+    // Félkör pozíció
+    glm::vec3 offset = -forward * cameraDistance;
+    offset.y += cameraHeight;
 
-    flatRight = glm::normalize(flatRight);
-
-    glm::vec3 movementDirection(0.0f);
-
-    if (Input::IsKeyPressed(GLFW_KEY_W))
-    {
-        movementDirection += flatForward;
-    }
-
-    if (Input::IsKeyPressed(GLFW_KEY_S))
-    {
-        movementDirection -= flatForward;
-    }
-
-    if (Input::IsKeyPressed(GLFW_KEY_D))
-    {
-        movementDirection += flatRight;
-    }
-
-    if (Input::IsKeyPressed(GLFW_KEY_A))
-    {
-        movementDirection -= flatRight;
-    }
-
-    if (glm::length(movementDirection) > 0.0f)
-    {
-        movementDirection = glm::normalize(movementDirection);
-
-        position += movementDirection * velocity;
-    }
-
-    position.y = fixedHeight;
+    position = pivot + offset;
 }
 
 glm::vec3 Camera::GetPosition() const

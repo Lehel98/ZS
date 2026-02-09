@@ -72,9 +72,11 @@ namespace
     constexpr glm::vec3 WallColor1 = glm::vec3(1.0f, 0.6f, 0.0f);  // sárga
     constexpr glm::vec3 WallColor2 = glm::vec3(0.8f, 0.1f, 0.1f);  // vörös
 
-    constexpr float CameraDistance = 20.0f;
-    constexpr float CameraHeight = 5.0f;
-    constexpr float CameraRadius = 0.25f;
+    constexpr float CameraHeight = 2.0f;
+    constexpr float CameraRadius = 0.3f;
+
+    constexpr float MinDegree = -70.0f;
+    constexpr float MaxDegree = 20.0f;
 }
 
 static bool InitializeGlfw()
@@ -385,8 +387,10 @@ static void RunGameLoop(GLFWwindow* window)
     };
 
     Camera camera(window);
-    glm::vec3 initialCameraOffset = -camera.GetForwardDirection() * CameraDistance + glm::vec3(0.0f, CameraHeight, 0.0f);
-    camera.SetPosition(player.transform.position + initialCameraOffset);
+
+    glm::vec3 pivot = player.transform.position + glm::vec3(0.0f, player.collision.capsule.height * 0.5f + CameraHeight, 0.0f);
+
+    const float cameraDistance = player.collision.capsule.height * 0.5f + CameraHeight;
 
     const float aspectRatio = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
@@ -523,29 +527,12 @@ static void RunGameLoop(GLFWwindow* window)
 
         PlayerMovement(player, worldEntities, camera, playerMovementSpeed);
 
-		// Third peson camera logic
-        glm::vec3 forward = camera.GetForwardDirection();
-        forward.y = 0.0f;
-
-        if (glm::length(forward) > 0.0001f)
-            forward = glm::normalize(forward);
-
-        const float playerRadius = player.collision.capsule.radius;
-        const float playerHeight = player.collision.capsule.height;
-
-        // kapszula közepe (váll/mellkas szint)
-        glm::vec3 cameraTarget =
+        pivot =
             player.transform.position +
-            glm::vec3(0.0f, playerRadius + (playerHeight - 2.0f * playerRadius) * 0.5f, 0.0f);
+            player.collision.localOffset +
+            glm::vec3(0.0f, player.collision.capsule.height * 0.5f, 0.0f);
 
-        glm::vec3 desiredCameraPosition =
-            cameraTarget
-            - forward * CameraDistance
-            + glm::vec3(0.0f, CameraHeight, 0.0f);
-
-        glm::vec3 finalCameraPosition = ResolveCameraCollision(player, desiredCameraPosition, CameraRadius, worldEntities);
-
-        camera.SetPosition(finalCameraPosition);
+        camera.UpdateThirdPerson(pivot, cameraDistance, CameraHeight, MinDegree, MaxDegree);
 
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

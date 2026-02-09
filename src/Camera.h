@@ -11,6 +11,7 @@ public:
     explicit Camera(GLFWwindow* window);
 
     void Update();
+    void UpdateThirdPerson(const glm::vec3& pivot, float cameraDistance, float cameraHeight, float minDegree, float maxDegree);
 
     glm::vec3 GetPosition() const;
     glm::vec3 GetForwardDirection() const;
@@ -21,7 +22,7 @@ public:
 
 private:
     void UpdateMouseLook();
-    void UpdateMovement();
+    void UpdateVectorsFromAngles();
 
 private:
     GLFWwindow* windowHandle;
@@ -31,13 +32,13 @@ private:
     glm::vec3 right;
     glm::vec3 up;
 
-    float yaw;
-    float pitch;
+    float yaw = 180.0f;
+    float pitch = 90.0f;
 
-    float movementSpeed;
-    float mouseSensitivity;
+    float MinPitch = -90.0f;
+    float MaxPitch = 90.0f;
 
-    float fixedHeight;
+    float mouseSensitivity = 0.1f;
 
     double lastMouseX;
     double lastMouseY;
