@@ -72,26 +72,50 @@ void Camera::UpdateVectorsFromAngles()
     up = glm::normalize(glm::cross(right, forward));
 }
 
-void Camera::UpdateThirdPerson(
+//void Camera::UpdateThirdPerson(
+//    const glm::vec3& pivot,
+//    float cameraDistance,
+//    float cameraHeight,
+//    float minDegree,
+//    float maxDegree)
+//{
+//    float effectiveMin = std::clamp(minDegree, -90.0f, -45.0f);
+//    float effectiveMax = std::clamp(maxDegree, 45.0f, 90.0f);
+//
+//    pitch = std::clamp(pitch, effectiveMin, effectiveMax);
+//
+//    // Frissítjük az irányvektorokat
+//    UpdateVectorsFromAngles();
+//
+//    // Félkör pozíció
+//    glm::vec3 offset = -forward * cameraDistance;
+//    offset.y += cameraHeight;
+//
+//    position = pivot + offset;
+//}
+
+glm::vec3 Camera::ComputeDesiredPosition(
     const glm::vec3& pivot,
     float cameraDistance,
     float cameraHeight,
     float minDegree,
     float maxDegree)
 {
+    // Clamp pitch tartomány (-90..90 rendszer)
     float effectiveMin = std::clamp(minDegree, -90.0f, -45.0f);
     float effectiveMax = std::clamp(maxDegree, 45.0f, 90.0f);
 
     pitch = std::clamp(pitch, effectiveMin, effectiveMax);
 
-    // Frissítjük az irányvektorokat
+    // Irányvektorok frissítése
     UpdateVectorsFromAngles();
 
-    // Félkör pozíció
+    // Félkör offset
     glm::vec3 offset = -forward * cameraDistance;
     offset.y += cameraHeight;
 
-    position = pivot + offset;
+    // Desired pozíció (még collision nélkül)
+    return pivot + offset;
 }
 
 glm::vec3 Camera::GetPosition() const

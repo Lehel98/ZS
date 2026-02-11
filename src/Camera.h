@@ -11,7 +11,14 @@ public:
     explicit Camera(GLFWwindow* window);
 
     void Update();
-    void UpdateThirdPerson(const glm::vec3& pivot, float cameraDistance, float cameraHeight, float minDegree, float maxDegree);
+    //void UpdateThirdPerson(const glm::vec3& pivot, float cameraDistance, float cameraHeight, float minDegree, float maxDegree);
+    glm::vec3 ComputeDesiredPosition(
+        const glm::vec3& pivot,
+        float cameraDistance,
+        float cameraHeight,
+        float minDegree,
+        float maxDegree);
+
 
     glm::vec3 GetPosition() const;
     glm::vec3 GetForwardDirection() const;

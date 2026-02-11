@@ -72,11 +72,11 @@ namespace
     constexpr glm::vec3 WallColor1 = glm::vec3(1.0f, 0.6f, 0.0f);  // sárga
     constexpr glm::vec3 WallColor2 = glm::vec3(0.8f, 0.1f, 0.1f);  // vörös
 
-    constexpr float CameraHeight = 2.0f;
+    constexpr float CameraHeight = 1.5f;
     constexpr float CameraRadius = 0.3f;
 
-    constexpr float MinDegree = -70.0f;
-    constexpr float MaxDegree = 20.0f;
+    constexpr float MinDegree = -90.0f;
+    constexpr float MaxDegree = 90.0f;
 }
 
 static bool InitializeGlfw()
@@ -527,12 +527,17 @@ static void RunGameLoop(GLFWwindow* window)
 
         PlayerMovement(player, worldEntities, camera, playerMovementSpeed);
 
-        pivot =
+        glm::vec3 pivot =
             player.transform.position +
             player.collision.localOffset +
             glm::vec3(0.0f, player.collision.capsule.height * 0.5f, 0.0f);
 
-        camera.UpdateThirdPerson(pivot, cameraDistance, CameraHeight, MinDegree, MaxDegree);
+        glm::vec3 desiredPosition = camera.ComputeDesiredPosition(pivot, cameraDistance, CameraHeight, MinDegree, MaxDegree);
+
+        // Collision → zoom-in
+        glm::vec3 finalPosition = ResolveCameraCollision(pivot, desiredPosition, CameraRadius, worldEntities);
+
+        camera.SetPosition(finalPosition);
 
         glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
